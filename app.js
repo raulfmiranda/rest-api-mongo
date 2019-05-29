@@ -3,6 +3,9 @@
 // load modules
 const express = require('express');
 const morgan = require('morgan');
+const mongoose = require('mongoose');
+var routes = require("./routes");
+var jsonParser = require("body-parser").json;
 
 // variable to enable global error logging
 const enableGlobalErrorLogging = process.env.ENABLE_GLOBAL_ERROR_LOGGING === 'true';
@@ -13,14 +16,48 @@ const app = express();
 // setup morgan which gives us http request logging
 app.use(morgan('dev'));
 
-// TODO setup your api routes here
+// parse request body
+app.use(jsonParser());
 
+// =================================================================================
+// Configure Mongoose
+
+mongoose.connect("mongodb://localhost:27017/fsjstd-restapi");
+
+var db = mongoose.connection;
+
+db.on("error", function(err){
+	console.error("connection error:", err);
+});
+
+db.once("open", function(){
+	console.log("db connection successful");
+});
+
+// =================================================================================
+// For CORS (Cross-origin resource sharing)
+
+app.use(function(req, res, next){
+	res.header("Access-Control-Allow-Origin", "*");
+	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	if(req.method === "OPTIONS") {
+		res.header("Access-Control-Allow-Methods", "PUT,POST,DELETE");
+		return res.status(200).json({});
+	}
+	next();
+});
+
+// =================================================================================
 // setup a friendly greeting for the root route
+
 app.get('/', (req, res) => {
   res.json({
     message: 'Welcome to the REST API project!',
   });
 });
+
+// setup api routes 
+app.use("/api", routes);
 
 // send 404 if no other route matched
 app.use((req, res) => {
