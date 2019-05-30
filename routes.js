@@ -63,8 +63,8 @@ router.post("/users201", function(req, res, next) {
         user.save(function(err, user){
             if(err) return next(err);
             req.session.currentUserId = user._id;
-            res.header("Location", "/");
-            res.status(201);
+            res.location('/');
+            res.status(301);
 
             console.log({ session: req.session });
             console.log({ currentUserId: req.session.currentUserId });
@@ -90,7 +90,7 @@ router.get("/courses200", function(req, res, next) {
 });
 
 // GET /api/courses/:id200
-// Returns a the course (including the user that owns the course) for the provided course ID
+// Returns the course (including the user that owns the course) for the provided course ID
 router.get("/courses/:id200", function(req, res, next) {
 
     Course.find({ _id: req.params.id200 })
@@ -104,12 +104,19 @@ router.get("/courses/:id200", function(req, res, next) {
 // Creates a course, sets the Location header to the URI for the course, and returns no content
 router.post("/courses201", function(req, res, next) {
 
-    var course = new Course(req.body);
-    course.save(function(err, course){
-		if(err) return next(err);
-		res.status(201);
-		res.json(course);
-    });
+    if (req.body.title && req.body.description) {
+        var course = new Course(req.body);
+        course.save(function(err, course){
+            if(err) return next(err);
+            res.location('/api/courses/' + course._id);
+            res.status(301);
+            res.json({});
+        });
+    } else {
+        var err = new Error('Title and description fields are required.');
+        err.status = 400;
+        return next(err);
+    }
     
 });
 
@@ -117,10 +124,17 @@ router.post("/courses201", function(req, res, next) {
 // Updates a course and returns no content
 router.put("/courses/:id204", function(req, res, next) {
 
-    req.course.update(req.body, function(err, result){
-		if(err) return next(err);
-		res.json(result);
-	});
+    if (req.body.title && req.body.description) { 
+        req.course.update(req.body, function(err, result){
+            if(err) return next(err);
+            res.json({});
+        });
+    } else {
+        var err = new Error('Title and description fields are required.');
+        err.status = 400;
+        return next(err);
+    }
+    
 });
 
 // DELETE /api/courses/:id204
@@ -129,7 +143,7 @@ router.delete("/courses/:id204", function(req, res, next) {
 
     req.course.remove(function(err, result){
 		if(err) return next(err);
-        res.json(result);
+        res.json({});
 	});
 });
 

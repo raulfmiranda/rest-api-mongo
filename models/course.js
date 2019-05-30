@@ -6,8 +6,16 @@ var Schema = mongoose.Schema;
 
 var CourseSchema = new Schema({
 	user: Schema.Types.ObjectId,
-	title: String,
-	description: String,
+	title: {
+        type: String,
+        required: true,
+        trim: true
+    },
+	description: {
+        type: String,
+        required: true,
+        trim: true
+    },
 	estimatedTime: String,
 	materialsNeeded: String
 });
