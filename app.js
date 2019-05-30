@@ -4,6 +4,8 @@
 const express = require('express');
 const morgan = require('morgan');
 const mongoose = require('mongoose');
+var session = require('express-session');
+var MongoStore = require('connect-mongo')(session);
 var routes = require("./routes");
 var jsonParser = require("body-parser").json;
 
@@ -33,6 +35,17 @@ db.on("error", function(err){
 db.once("open", function(){
 	console.log("db connection successful");
 });
+
+// =================================================================================
+// use sessions for tracking logins
+app.use(session({
+  secret: 'treehouse loves you',
+  resave: true,
+  saveUninitialized: false,
+  store: new MongoStore({
+    mongooseConnection: db
+  })
+}));
 
 // =================================================================================
 // For CORS (Cross-origin resource sharing)
