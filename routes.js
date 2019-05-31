@@ -20,32 +20,9 @@ router.param("id204", function(req, res, next, id){
 	});
 });
 
-// POST /login
-router.post('/login', function(req, res, next) {
-    if (req.body.emailAddress && req.body.password) {
-        User.authenticate(req.body.emailAddress, req.body.password, function (error, user) {
-            if (error || !user) {
-                var err = new Error('Wrong email or password.');
-                err.status = 401;
-                return next(err);
-            }  else {
-                req.session.currentUserId = user._id;
-                return res.json({ message: "User authenticated" });
-            }
-        });
-    } else {
-        var err = new Error('Email and password are required.');
-        err.status = 401;
-        return next(err);
-    }
-});
-
 // GET /api/users200
 // Returns the currently authenticated user
-router.get("/users200", function(req, res, next) {
-
-    console.log({ session: req.session });
-    console.log({ currentUserId: req.session.currentUserId });
+router.get("/users200", mid.checkCredentials, function(req, res, next) {
 
     User.find({ _id: req.session.currentUserId })
         .exec(function(err, user) {
@@ -62,13 +39,11 @@ router.post("/users201", function(req, res, next) {
         var user = new User(req.body);
         user.save(function(err, user){
             if(err) return next(err);
+
             req.session.currentUserId = user._id;
+
             res.location('/');
             res.status(301);
-
-            console.log({ session: req.session });
-            console.log({ currentUserId: req.session.currentUserId });
-
             res.json({});
         });
     } else {
@@ -87,22 +62,58 @@ router.get("/courses200", function(req, res, next) {
             if (err) return next(err);
             res.json(courses);
         });
+
+    // var newCourses = [ "test" ];
+    
+    // Course.find({})
+    //     .stream().on('data', function (course) {
+    //         // console.log(course);
+    //         if (course.user) {
+    //             User.findById(course.user, function(err, user) {
+    //                 if(err) return next(err);
+    //                 if(!user) {
+    //                     err = new Error("Not Found");
+    //                     err.status = 404;
+    //                     return next(err);
+    //                 }
+    //                 course.user = user;
+    //                 console.log('push: ' + course.user._id);
+    //                 newCourses.push(course);
+    //             });
+    //         }
+    //     }).on('end', function() {
+    //         console.log({ newCourses });
+    //         res.json({ newCourses });
+    //     });
 });
 
 // GET /api/courses/:id200
 // Returns the course (including the user that owns the course) for the provided course ID
 router.get("/courses/:id200", function(req, res, next) {
 
-    Course.find({ _id: req.params.id200 })
+    Course.findOne({ _id: req.params.id200 })
         .exec(function(err, course) {
             if (err) return next(err);
-            res.json(course);
+
+            if (course.user) {
+                User.findById(course.user, function(err, user) {
+                    if(err) return next(err);
+                    if(!user) {
+                        err = new Error("Not Found");
+                        err.status = 404;
+                        return next(err);
+                    }
+                    course._doc.user = user;
+                    res.json(course);
+                    // res.json({ ...course._doc, user });
+                });
+            }
         });
 });
 
 // POST /api/courses201
 // Creates a course, sets the Location header to the URI for the course, and returns no content
-router.post("/courses201", function(req, res, next) {
+router.post("/courses201", mid.checkCredentials, function(req, res, next) {
 
     if (req.body.title && req.body.description) {
         var course = new Course(req.body);
@@ -122,7 +133,7 @@ router.post("/courses201", function(req, res, next) {
 
 // PUT /api/courses/:id204
 // Updates a course and returns no content
-router.put("/courses/:id204", function(req, res, next) {
+router.put("/courses/:id204", mid.checkCredentials, function(req, res, next) {
 
     if (req.body.title && req.body.description) { 
         req.course.update(req.body, function(err, result){
@@ -139,7 +150,7 @@ router.put("/courses/:id204", function(req, res, next) {
 
 // DELETE /api/courses/:id204
 // Deletes a course and returns no content
-router.delete("/courses/:id204", function(req, res, next) {
+router.delete("/courses/:id204", mid.checkCredentials, function(req, res, next) {
 
     req.course.remove(function(err, result){
 		if(err) return next(err);
