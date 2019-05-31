@@ -33,7 +33,7 @@ router.get("/users200", mid.checkCredentials, function(req, res, next) {
 
 // POST /api/users201
 // Creates a user, sets the Location header to "/", and returns no content
-router.post("/users201", function(req, res, next) {
+router.post("/users201", mid.emailValidation, function(req, res, next) {
 
     if (req.body.firstName && req.body.lastName && req.body.emailAddress && req.body.password) {
         var user = new User(req.body);
@@ -58,33 +58,11 @@ router.post("/users201", function(req, res, next) {
 router.get("/courses200", function(req, res, next) {
 
     Course.find({})
+        .populate('user', 'firstName lastName')
         .exec(function(err, courses) {
             if (err) return next(err);
             res.json(courses);
         });
-
-    // var newCourses = [ "test" ];
-    
-    // Course.find({})
-    //     .stream().on('data', function (course) {
-    //         // console.log(course);
-    //         if (course.user) {
-    //             User.findById(course.user, function(err, user) {
-    //                 if(err) return next(err);
-    //                 if(!user) {
-    //                     err = new Error("Not Found");
-    //                     err.status = 404;
-    //                     return next(err);
-    //                 }
-    //                 course.user = user;
-    //                 console.log('push: ' + course.user._id);
-    //                 newCourses.push(course);
-    //             });
-    //         }
-    //     }).on('end', function() {
-    //         console.log({ newCourses });
-    //         res.json({ newCourses });
-    //     });
 });
 
 // GET /api/courses/:id200
@@ -92,22 +70,10 @@ router.get("/courses200", function(req, res, next) {
 router.get("/courses/:id200", function(req, res, next) {
 
     Course.findOne({ _id: req.params.id200 })
+        .populate('user', 'firstName lastName')
         .exec(function(err, course) {
             if (err) return next(err);
-
-            if (course.user) {
-                User.findById(course.user, function(err, user) {
-                    if(err) return next(err);
-                    if(!user) {
-                        err = new Error("Not Found");
-                        err.status = 404;
-                        return next(err);
-                    }
-                    course._doc.user = user;
-                    res.json(course);
-                    // res.json({ ...course._doc, user });
-                });
-            }
+            res.json(course);
         });
 });
 
@@ -116,7 +82,11 @@ router.get("/courses/:id200", function(req, res, next) {
 router.post("/courses201", mid.checkCredentials, function(req, res, next) {
 
     if (req.body.title && req.body.description) {
-        var course = new Course(req.body);
+
+        let courseFromBody = req.body;
+        courseFromBody.user = req.session.currentUserId;
+        var course = new Course(courseFromBody);
+
         course.save(function(err, course){
             if(err) return next(err);
             res.location('/api/courses/' + course._id);
@@ -133,7 +103,7 @@ router.post("/courses201", mid.checkCredentials, function(req, res, next) {
 
 // PUT /api/courses/:id204
 // Updates a course and returns no content
-router.put("/courses/:id204", mid.checkCredentials, function(req, res, next) {
+router.put("/courses/:id204", mid.checkCredentials, mid.userCourseOwner, function(req, res, next) {
 
     if (req.body.title && req.body.description) { 
         req.course.update(req.body, function(err, result){
@@ -150,7 +120,7 @@ router.put("/courses/:id204", mid.checkCredentials, function(req, res, next) {
 
 // DELETE /api/courses/:id204
 // Deletes a course and returns no content
-router.delete("/courses/:id204", mid.checkCredentials, function(req, res, next) {
+router.delete("/courses/:id204", mid.checkCredentials, mid.userCourseOwner, function(req, res, next) {
 
     req.course.remove(function(err, result){
 		if(err) return next(err);

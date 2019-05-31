@@ -5,7 +5,10 @@ var mongoose = require("mongoose");
 var Schema = mongoose.Schema;
 
 var CourseSchema = new Schema({
-	user: Schema.Types.ObjectId,
+	user: { 
+        type: Schema.Types.ObjectId,
+        ref: 'User' 
+    },
 	title: {
         type: String,
         required: true,
